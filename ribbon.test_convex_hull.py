@@ -7,6 +7,7 @@ import glob
 import os
 from scipy import ndimage
 import difflib
+from subprocess import check_call
 
 import matplotlib
 matplotlib.use('Agg')
@@ -95,12 +96,13 @@ def get_edges(img):
 
 
 def save_to_nii(data,fn):
-    out_dir='/data/shmuel/shmuel1/rap/histo/data/hull/'
+    out_dir='/data/shmuel/shmuel1/rap/histo/data/20180420_hull/'
     affine=np.eye(len(data.shape))
     img = nib.Nifti1Image(data,affine)
     path=out_dir+fn
     print(path)
     nib.save(img,path)
+    check_call(['gzip',path])
 
 def bgr_2_gray(img):
     # the bgr channel is located at axis=2
@@ -141,72 +143,38 @@ def convex_hull_segment(fdata):
 
 
 
-def convexicate(files,verbose=False):
+def convexicate(slice_fn,segment_fn,verbose=False):
 
-    for l,line in enumerate(files):
-        try:
-            slice_fn=line[0]
-            segment_fn=line[1]
-            slice_nb=os.path.basename(segment_fn)[:4]
-            quad_nb=os.path.basename(segment_fn).split('segmented')[0][-2]
-            if verbose:
-                print("{} : {}".format(slice_fn,segment_fn))
-            segment_data = nib.load(segment_fn).get_data()
-            ch,num_ch_labeled=get_channel(segment_data)
-            if ch<0:
-                print("{} does not have pink labels".format(segment_fn))
-            elif num_ch_labeled>1:
-                print("{} has too many channels with multiple labels".format(segment_fn))
-            segment_data=segment_data[:,:,ch]
-            print(segment_data.shape)
-            segment_data = np.asarray(consolidate(segment_data.tolist()))
-            segment_hull = convex_hull_segment(segment_data)
-            segment_hull = np.reshape(segment_hull,segment_hull.shape+(1,1,))
-            segment_hull = np.repeat(segment_hull,3,axis=2)
-            fn='{0}-6x_whole.jpg_{1}.segment_hull.nii.gz'.format(slice_nb,quad_nb)
-            save_to_nii(segment_hull,fn)
-
-        except Exception as e:
-            print(str(e))
-            pass
-
-
-def split_train_valid(slices_fn,segments_fn):
-    # print(sorted(slices_fn))
-    train_files =[] 
-    validation_files=[]
-    for n,segment_fn in enumerate(segments_fn):
-        # slice_quad_number = os.path.basename(segment_fn).split('segmented.nii')[0].upper()
-        # print(os.path.basename(segment_fn))
-        slice_fn=difflib.get_close_matches(segment_fn,slices_fn)[0]
-        # slice_fn=[fn for fn in slices_fn if slice_quad_number in fn.upper()]
-        if not slice_fn:
-            print("Could not find an equivalent segment file {}".format(segment_fn))
-            continue
-        # print(slice_fn)
-        if np.mod(n,5):
-            train_files.append((slice_fn,segment_fn))
-        else:
-            validation_files.append((slice_fn,segment_fn))
-        # print(slice_number)
-    # print(sorted(segments_fn))
-    return train_files,validation_files
+    slice_fn=line[0]
+    segment_fn=line[1]
+    slice_nb=os.path.basename(segment_fn)[:4]
+    quad_nb=slice_fn.split('.jpg.')[0][-1]
+    if verbose:
+        print("{} : {}".format(slice_fn,segment_fn))
+    segment_data = nib.load(segment_fn).get_data()
+    ch,num_ch_labeled=get_channel(segment_data)
+    if ch<0:
+        print("{} does not have pink labels".format(segment_fn))
+    elif num_ch_labeled>1:
+        print("{} has too many channels with multiple labels".format(segment_fn))
+    segment_data=segment_data[:,:,ch]
+    print(segment_data.shape)
+    segment_data = np.asarray(consolidate(segment_data.tolist()))
+    segment_hull = convex_hull_segment(segment_data)
+    segment_hull = np.reshape(segment_hull,segment_hull.shape+(1,1,))
+    segment_hull = np.repeat(segment_hull,3,axis=2)
+    fn='{0}_6x_concat_6x_whole.jpg_{1}.hull.nii'.format(slice_nb,quad_nb)
+    save_to_nii(segment_hull,fn)
 
 
 
-# data_path = "/data/shmuel/shmuel1/rap/histo/data/"
-data_path = "/data/shmuel/shmuel1/deepthi/RM311_HighRes_Seg_Set1_1-74/"
-slices_fn = grab_files(data_path,"*/*.jpg.nii")
-segments_fn = grab_files(data_path,"*/*segmented.nii*")
-train_files,validation_files = split_train_valid(slices_fn,segments_fn)
-files=train_files+validation_files
 
-# print([i for i in files if '0165' in i[0]])
 
-print(files)
+slice_fn = sys.argv[1]
+segment_fn = sys.argv[2]
 
-print('\n==Convexicating the files ==\n')
-# convexicate(files,verbose=True)
+print('\n==Convexicating the file ==\n')
+convexicate(slice_fn,segment_fn,verbose=True)
 
 # filename=sys.argv[1]
 # ConvexHullCerebellum(fprefix=os.getcwd(),finput_volume=filename,outputfile='test_hull.png')
