@@ -1,7 +1,7 @@
 #!/bin/sh
 
 mv ~/ribbon.BIC_* ~/log_ribn
-segment_files='/data/shmuel/shmuel1/rap/histo/data/segmented_files.txt'
+segment_files='/data/shmuel/shmuel1/rap/histo/data/two_segmented_files.txt'
 while IFS=" " read -r slice_fn segment_fn remainder; do
     qsub -q all.q -l h_vmem=65G ribbon.BIC_CPU.test.sh $slice_fn $segment_fn
 done <$segment_files
