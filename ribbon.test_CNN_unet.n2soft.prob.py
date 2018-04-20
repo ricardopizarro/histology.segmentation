@@ -248,7 +248,7 @@ def calc_dc(data):
     return 2.0*tp/(2*tp+fp+fn)
 
 def save_to_nii(data,fn):
-    out_dir='/data/shmuel/shmuel1/rap/histo/prediction/subcortex/20180418_nohull/'
+    out_dir='/data/shmuel/shmuel1/rap/histo/prediction/subcortex/20180420_hull/'
     affine=np.eye(len(data.shape))
     img = nib.Nifti1Image(data,affine)
     path=os.path.join(out_dir,fn)
@@ -339,7 +339,7 @@ def testNN(slice_fn,segment_fn,hull_fn,nb_tiles_in,verbose=False):
     plt.xlabel("Dice Coefficient")
     plt.ylabel("Frequency")
     fn='{0}_6x_concat_6x_whole.jpg_{1}.DC_distribution.{2:04d}tiled.DC{3:0.3f}.png'.format(slice_nb,quad_nb,nb_tiles,np.mean(dc_val))
-    plt.savefig('/data/shmuel/shmuel1/rap/histo/prediction/subcortex/20180418_nohull/'+fn)
+    plt.savefig('/data/shmuel/shmuel1/rap/histo/prediction/subcortex/20180420_hull/'+fn)
     plt.close()
 
     Y_out_slice=Y_true_slice+3*Y_pred_slice
