@@ -71,7 +71,7 @@ def consolidate_seg(seg):
     return seg
 
 
-def segment(tile,seg):
+def segment(tile,seg,hull):
     # We used the labeled seg to segment the subcortex and cerebellum
     # To mask this portion out we simply make it white like the background post normalization [10,10,10]
     for m,row in enumerate(seg):
@@ -80,18 +80,9 @@ def segment(tile,seg):
             # print(hull[m][n])
             if elem in [4]:
                 tile[m,n]=10
-            # elif 0 in hull[m][n]:
-            #     tile[m,n,:]=20
+            elif 0 in hull[m][n]:
+                tile[m,n,:]=20
     return tile
-
-def convexicate(data,hull):
-    # We used the labeled hull to segment the brain from background
-    # To mask this portion out we simply make it white like the background [255,255,255]
-    for m,row in enumerate(hull):
-        for n,elem in enumerate(row):
-            if elem in [0]:
-                data[m,n,:]=255
-    return data
 
 
 def swap_labels(tile,a,b):
@@ -145,7 +136,7 @@ def zero_pad(data,tile_width):
     return data_pad
 
 
-def gen_tiles(img_fn,seg_fn,tile_width,slice_nb,quad_nb,nb_tiles):
+def gen_tiles(img_fn,seg_fn,hull_fn,tile_width,slice_nb,quad_nb,nb_tiles):
     img = nib.load(img_fn)
     data=rgb_2_lum(img.get_data())
     shape=data.shape
@@ -155,6 +146,7 @@ def gen_tiles(img_fn,seg_fn,tile_width,slice_nb,quad_nb,nb_tiles):
         shape=data.shape
         print('changed shape to : {}'.format(shape))
 
+    hull_data = nib.load(hull_fn).get_data()
     seg_data = nib.load(seg_fn).get_data()
     ch,num_ch_labeled=get_channel(seg_data)
     if ch<0:
@@ -176,9 +168,10 @@ def gen_tiles(img_fn,seg_fn,tile_width,slice_nb,quad_nb,nb_tiles):
     for x,y in coord:
         print((tidx,x,y))
         seg_tile=seg_data[x:x+tile_width,y:y+tile_width,ch].tolist()
+        hull_tile=hull_data[x:x+tile_width,y:y+tile_width,ch].tolist()
         tile_lum=data[x:x+tile_width,y:y+tile_width]
         tile_norm=normalize_tile(tile_lum)
-        tiles_norm[tidx,:,:,0]=segment(tile_norm,seg_tile)
+        tiles_norm[tidx,:,:,0]=segment(tile_norm,seg_tile,hull_tile)
 
         seg_tmp=np.asarray(consolidate_seg(seg_tile))
         seg_pad=np.zeros(seg.shape[1:])
@@ -264,7 +257,7 @@ def save_to_nii(data,fn):
     check_call(['gzip', path])
 
 
-def testNN(slice_fn,segment_fn,nb_tiles_in,verbose=False):
+def testNN(slice_fn,segment_fn,hull_fn,nb_tiles_in,verbose=False):
     # nb_step is number of tiles per step
     input_size=(2560,2560,1)
     output_size=(2560,2560,2)
@@ -278,12 +271,12 @@ def testNN(slice_fn,segment_fn,nb_tiles_in,verbose=False):
     slice_nb=os.path.basename(slice_fn)[:4]
     quad_nb =slice_fn.split('.jpg.')[0][-1]
     if verbose:
-        print("{} : {}".format(slice_fn,segment_fn))
+        print("{} : {}".format(slice_fn,segment_fn,hull_fn))
     # tiles_rgb are for viewing, tiles are normalized used for predicting
     # coord identifies the location of the tile,seg
     # slice_shape specifies the shape of the image
     nb_tiles=nb_tiles_in
-    tiles_norm,seg,coord,slice_shape=gen_tiles(slice_fn,segment_fn,tile_width,slice_nb,quad_nb,nb_tiles)
+    tiles_norm,seg,coord,slice_shape=gen_tiles(slice_fn,segment_fn,hull_fn,tile_width,slice_nb,quad_nb,nb_tiles)
     nb_tiles=len(coord)
 
     seg=np.reshape(np_utils.to_categorical(seg,output_size[-1]),(nb_tiles,)+output_size)
@@ -357,10 +350,11 @@ def testNN(slice_fn,segment_fn,nb_tiles_in,verbose=False):
 
 slice_fn = sys.argv[1]
 segment_fn = sys.argv[2]
+hull_fn = sys.argv[3]
 
 print('\n==Testing NN UNET ==\n')
 nb_tiles=20
-testNN(slice_fn,segment_fn,nb_tiles,verbose=True)
+testNN(slice_fn,segment_fn,hull_fn,nb_tiles,verbose=True)
 
 
 
