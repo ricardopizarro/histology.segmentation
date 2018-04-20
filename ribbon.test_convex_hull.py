@@ -4,7 +4,7 @@ import nibabel as nib
 import numpy as np
 import cv2 as cv
 import glob
-import os
+import os,sys
 from scipy import ndimage
 import difflib
 from subprocess import check_call
