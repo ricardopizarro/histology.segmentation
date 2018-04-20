@@ -81,7 +81,7 @@ def segment(tile,seg,hull):
             if elem in [4]:
                 tile[m,n]=10
             elif 0 in hull[m][n]:
-                tile[m,n,:]=20
+                tile[m,n]=20
     return tile
 
 
