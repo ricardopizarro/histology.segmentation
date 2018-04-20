@@ -9,10 +9,6 @@ from scipy import ndimage
 import difflib
 from subprocess import check_call
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-
 def consolidate(seg):
     # swap elements labeled 6 and 2 to 0.  
     # elements labeled 6 indicate a tear in the white matter
