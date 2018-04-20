@@ -13,11 +13,6 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-
-def grab_files(path,end):
-    return glob.glob(path+end)
-
-
 def consolidate(seg):
     # swap elements labeled 6 and 2 to 0.  
     # elements labeled 6 indicate a tear in the white matter
@@ -50,22 +45,6 @@ def swap_labels(tile,a,b):
                 tile[m][n]=b
     return tile
 
-def normalize_tile(tile):
-    m=float(np.mean(tile))
-    st=float(np.std(tile))
-    if st > 0:
-        norm = (tile-m)/float(st)
-    else:
-        norm = tile - m
-    return norm
-
-def normalize(tile_rgb):
-    # normalize by RGB channel
-    tile_norm=np.zeros(tile_rgb.shape)
-    for ch in range(tile_rgb.shape[2]):
-	tile=tile_rgb[:,:,ch]
-        tile_norm[:,:,ch]=normalize_tile(tile_rgb[:,:,ch])
-    return tile_norm
 
 def get_channel(img):
     ch_ret=-1
@@ -80,20 +59,6 @@ def get_channel(img):
 
 
 
-def get_edges(img):
-    # print(img.shape[1:3])
-    img=np.reshape(img,img.shape[1:3])
-    sx = ndimage.sobel(img, axis=0, mode='constant')
-    sy = ndimage.sobel(img, axis=1, mode='constant')
-    sob = np.around(np.hypot(sx, sy))
-    mag = np.max(sob)-np.min(sob)
-    if mag > 1e-3:
-        sob = np.around((sob-np.min(sob))/(mag))
-    sob_dilated = ndimage.binary_dilation(sob).astype(sob.dtype)
-    sob_dilated = ndimage.binary_dilation(sob_dilated).astype(sob.dtype)
-    return sob,sob_dilated
-
-
 
 def save_to_nii(data,fn):
     out_dir='/data/shmuel/shmuel1/rap/histo/data/20180420_hull/'
@@ -103,17 +68,6 @@ def save_to_nii(data,fn):
     print(path)
     nib.save(img,path)
     check_call(['gzip',path])
-
-def bgr_2_gray(img):
-    # the bgr channel is located at axis=2
-    img=0.2989*img[:,:,2]+0.587*img[:,:,1]+0.114*img[:,:,0]
-    return img
-
-def rgb_2_gray(img):
-    # the rgb channel is located at axis=3 for the tiles
-    img=0.2989*img[:,:,:,0]+0.587*img[:,:,:,1]+0.114*img[:,:,:,2]
-    return img
-
 
 
 def convex_hull_segment(fdata):
@@ -145,8 +99,6 @@ def convex_hull_segment(fdata):
 
 def convexicate(slice_fn,segment_fn,verbose=False):
 
-    slice_fn=line[0]
-    segment_fn=line[1]
     slice_nb=os.path.basename(segment_fn)[:4]
     quad_nb=slice_fn.split('.jpg.')[0][-1]
     if verbose:
