@@ -1,15 +1,10 @@
 import nibabel as nib
 import numpy as np
-import cv2 as cv
 import glob
-import json
 import os,sys
-import tensorflow as tf
-from scipy import ndimage
 import difflib
 import random
 from subprocess import check_call
-
 
 def grab_files(path,end):
     return glob.glob(os.path.join(path,end))
